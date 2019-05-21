@@ -50,7 +50,7 @@ module.exports = function (userOptions = {}, customParams = {}) {
     }
 
     if (!params.script) {
-      params.script = path.posix.join(options.documentRoot, params.document || params.uri)
+      params.script = path.join(options.documentRoot, params.document || params.uri)
     }
 
     const headers = {
@@ -69,6 +69,8 @@ module.exports = function (userOptions = {}, customParams = {}) {
       REMOTE_ADDR: req.connection.remoteAddress,
       REMOTE_PORT: req.connection.remotePort,
       SERVER_NAME: req.connection.domain,
+      HTTP_HOST: req.headers.host,
+      HTTP_COOKIE: req.headers.cookie,
       SERVER_PROTOCOL: 'HTTP/1.1',
       GATEWAY_INTERFACE: 'CGI/1.1',
       SERVER_SOFTWARE: 'php-fpm for Node',
@@ -79,10 +81,6 @@ module.exports = function (userOptions = {}, customParams = {}) {
       if (typeof headers[header] === 'undefined') { delete headers[header] }
     }
 
-    for (header in req.headers) {                                                      
-      headers['HTTP_' + header.toUpperCase().replace(/-/g, '_')] = req.headers[header];
-    }                                                           
-
     if (options.debug) {
       console.log(headers)
     }
@@ -90,7 +88,7 @@ module.exports = function (userOptions = {}, customParams = {}) {
     const php = await fpm
     return new Promise(function (resolve, reject) {
       php.request(headers, function (err, request) {
-        if (err) { return reject(err) }
+        if (err) { reject(err) }
         var output = ''
         var errors = ''
 
@@ -105,36 +103,33 @@ module.exports = function (userOptions = {}, customParams = {}) {
         })
 
         request.stdout.on('end', function () {
-          if (errors) { return reject(new Error(errors)) }
+          if (errors) { reject(new Error(errors)) }
 
           const head = output.match(/^[\s\S]*?\r\n\r\n/)[0]
-          const parseHead = head.split('\r\n').filter(_ => _)
-          const responseHeaders = {}
-          let statusCode = 200
-          let statusMessage = ''
-          
-          for (const item of parseHead) {
-            const pair = item.split(': ')
-            
-            if (pair.length > 1 && pair[0] && pair[1]) {
-              if (pair[0] in responseHeaders) {
-                responseHeaders[pair[0]].push(pair[1])
-              } else {
-                responseHeaders[pair[0]] = [ pair[1] ]
-              }
 
-              if (pair[0] === 'Status') {
-                const match = pair[1].match(/(\d+) (.*)/)
-                statusCode = parseInt(match[1])
-                statusMessage = match[2]
-              }
+
+          const parseHead = head.split('\r\n').filter(_ => _)
+          const cookies = parseHead.filter(
+            value => value.split(':')[0] === 'Set-Cookie'
+          ).map(
+            value => value.split(':')[1].split(';')[0].trim()
+          );
+
+          let headers = {};
+          for (const item of parseHead) {
+            const pair = item.split(': ');
+            if (pair[0] !== 'Set-Cookie') {
+              res.setHeader(pair[0], pair[1])
+            }
+            if (pair[0] === 'Status') {
+              res.statusCode = parseInt(pair[1].match(/\d+/)[0])
             }
           }
-
-          res.writeHead(statusCode, statusMessage, responseHeaders)
+          res.setHeader('Set-Cookie', cookies);
           const body = output.slice(head.length)
           res.write(body)
           res.end()
+
 
           resolve({ headers, body })
         })
