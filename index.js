@@ -55,6 +55,7 @@ module.exports = function (userOptions = {}, customParams = {}) {
 
     const headers = {
       REQUEST_METHOD: req.method,
+      HTTP_ACCEPT: req.headers['accept'],
       CONTENT_TYPE: req.headers['content-type'],
       CONTENT_LENGTH: req.headers['content-length'],
       CONTENT_DISPOSITION: req.headers['content-disposition'],
@@ -75,6 +76,10 @@ module.exports = function (userOptions = {}, customParams = {}) {
       GATEWAY_INTERFACE: 'CGI/1.1',
       SERVER_SOFTWARE: 'php-fpm for Node',
       REDIRECT_STATUS: 200
+    }
+    
+    if (req.headers['x-requested-with'] !== undefined) {
+      headers['HTTP_X_REQUESTED_WITH'] = req.headers['x-requested-with']
     }
 
     for (const header in headers) {
