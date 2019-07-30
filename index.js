@@ -75,7 +75,9 @@ module.exports = function (userOptions = {}, customParams = {}) {
       SERVER_PROTOCOL: 'HTTP/1.1',
       GATEWAY_INTERFACE: 'CGI/1.1',
       SERVER_SOFTWARE: 'php-fpm for Node',
-      REDIRECT_STATUS: 200
+      REDIRECT_STATUS: 200,
+      SERVER_PORT: req.headers.host.split(':')[1],
+      SERVER_NAME: req.headers.host.split(':')[0],
     }
     
     if (req.headers['x-requested-with'] !== undefined) {
