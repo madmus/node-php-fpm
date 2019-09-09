@@ -16,9 +16,8 @@ module.exports = function (userOptions = {}, customParams = {}) {
   })
 
   return async function (req, res, next) {
-    console.log(req.url);
-    if (req.url.indexOf('/api') === 1) {
-      next() // Stop middleware continue NestJS
+    if (req.url.indexOf('/v2/api') !== -1) {
+      return next() // Stop middleware continue NestJS
     }
 
     let params = Object.assign({}, customParams, {
