@@ -15,7 +15,12 @@ module.exports = function (userOptions = {}, customParams = {}) {
     loader.on('error', reject)
   })
 
-  return async function (req, res) {
+  return async function (req, res, next) {
+    console.log(req.url);
+    if (req.url.indexOf('/api') === 1) {
+      next() // Stop middleware continue NestJS
+    }
+
     let params = Object.assign({}, customParams, {
       uri: req.url
     })
@@ -79,7 +84,7 @@ module.exports = function (userOptions = {}, customParams = {}) {
       SERVER_PORT: req.headers.host.split(':')[1] || 80,
       SERVER_NAME: req.headers.host.split(':')[0] || '127.0.0.1',
     }
-    
+
     if (req.headers['x-requested-with'] !== undefined) {
       headers['HTTP_X_REQUESTED_WITH'] = req.headers['x-requested-with']
     }
@@ -114,17 +119,16 @@ module.exports = function (userOptions = {}, customParams = {}) {
 
           const head = output.match(/^[\s\S]*?\r\n\r\n/)[0]
 
-
           const parseHead = head.split('\r\n').filter(_ => _)
           const cookies = parseHead.filter(
             value => value.split(':')[0] === 'Set-Cookie'
           ).map(
             value => value.split(':')[1].split(';')[0].trim()
-          );
+          )
 
-          let headers = {};
+          let headers = {}
           for (const item of parseHead) {
-            const pair = item.split(': ');
+            const pair = item.split(': ')
             if (pair[0] !== 'Set-Cookie') {
               res.setHeader(pair[0], pair[1])
             }
@@ -132,11 +136,10 @@ module.exports = function (userOptions = {}, customParams = {}) {
               res.statusCode = parseInt(pair[1].match(/\d+/)[0])
             }
           }
-          res.setHeader('Set-Cookie', cookies);
+          res.setHeader('Set-Cookie', cookies)
           const body = output.slice(head.length)
           res.write(body)
           res.end()
-
 
           resolve({ headers, body })
         })
