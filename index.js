@@ -83,6 +83,10 @@ module.exports = function (userOptions = {}, customParams = {}) {
       SERVER_PORT: req.headers.host.split(':')[1] || 80,
       SERVER_NAME: req.headers.host.split(':')[0] || '127.0.0.1',
     }
+    
+    if (req.headers['x-widget-csrf-token'] !== undefined) {
+      headers['HTTP_X_WIDGET_CSRF_TOKEN'] = req.headers['x-widget-csrf-token'];
+    }
 
     if (req.headers['x-requested-with'] !== undefined) {
       headers['HTTP_X_REQUESTED_WITH'] = req.headers['x-requested-with']
